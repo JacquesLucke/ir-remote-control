@@ -44,13 +44,23 @@ static void setupWebServer() {
     for (int i = 0; i < last_ir_messages.size(); i++) {
       const IRDecodeResults &ir_result =
           last_ir_messages.get_least_recently_added(i);
+      const String hex_code = resultToHexidecimal(&ir_result);
       response += "<tr>";
       response += "<td>" + typeToString(ir_result.decode_type) + "<th>";
-      response += "<td>" + resultToHexidecimal(&ir_result) + "<th>";
+      response += "<td>" + hex_code + "<th>";
+      response += "<td><button type='button' "
+                  "onclick=\"fetch('./send_ir?hex_code=" +
+                  hex_code + "')\">Send</button></td>";
       response += "</tr>";
     }
     response += "</table>";
     web_server.send(200, "text/html", response.c_str());
+  });
+
+  web_server.on("/send_ir", []() {
+    String hex_code = web_server.arg("hex_code");
+    Serial.println(hex_code);
+    web_server.send(200, "text/html", "code send");
   });
 }
 
