@@ -48,7 +48,19 @@ static void setupWebServer() {
   Serial.printf("Started web server on port %d.\n", web_server_port);
 
   web_server.on("/", []() {
-    String response = "<h1>Remote Control</h1>";
+    String response;
+    response += R"STR(
+      <!DOCTYPE>
+      <html lang='en'>
+      <head>
+        <meta charset='UTF-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+        <title>IR Remote</title>
+        <link rel='stylesheet' href='./style.css'>
+      </head>
+      <body>
+    )STR";
+    response += "<h1>Remote Control</h1>";
 
     response += makeSendButtonNED("Reduce Volume", "0x1EA0CF3");
     response += makeSendButtonNED("Increase Volume", "0x1EA0DF2");
@@ -65,6 +77,7 @@ static void setupWebServer() {
       response += "</tr>";
     }
     response += "</table>";
+    response += "</body></html>";
     web_server.send(200, "text/html", response.c_str());
   });
 
@@ -82,6 +95,14 @@ static void setupWebServer() {
     ir_receiver.enableIRIn();
 
     web_server.send(200, "text/html", "code send");
+  });
+
+  web_server.on("/style.css", []() {
+    web_server.send(200, "text/css", R"STR(
+      * {
+        color: blue;
+      }
+    )STR");
   });
 }
 
