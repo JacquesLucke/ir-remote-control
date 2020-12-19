@@ -1,5 +1,10 @@
 #include <Arduino.h>
 
-void setup() {}
+static void setupWiFiConnection() {
+}
 
-void loop() {}
+void setup() {
+}
+
+void loop() {
+}
