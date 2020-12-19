@@ -23,6 +23,9 @@ static void setupWiFiConnection() {
 static void setupWebServer() {
   web_server.begin();
   Serial.printf("Started web server on port %d.\n", web_server_port);
+
+  web_server.on("/",
+                []() { web_server.send(200, "text/html", "Remote Control"); });
 }
 
 void setup() {
@@ -32,4 +35,5 @@ void setup() {
 }
 
 void loop() {
+  web_server.handleClient();
 }
