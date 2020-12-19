@@ -37,10 +37,10 @@ static void setupWiFiConnection() {
   Serial.println(WiFi.localIP());
 }
 
-static String makeSendButtonNED(const char *name, const char *hex_code) {
-  return "<button type='button' "
+static String makeQuickSendButton(const char *name, const char *hex_code) {
+  return "<div class='quick-send-button' "
          "onclick=\"fetch('./send_ir?hex_code=" +
-         String(hex_code) + "')\">" + name + "</button>";
+         String(hex_code) + "')\">" + name + "</div>";
 }
 
 static void setupWebServer() {
@@ -60,10 +60,19 @@ static void setupWebServer() {
       </head>
       <body>
     )STR";
-    response += "<h1>Remote Control</h1>";
 
-    response += makeSendButtonNED("Reduce Volume", "0x1EA0CF3");
-    response += makeSendButtonNED("Increase Volume", "0x1EA0DF2");
+    response += "<div class='quick-buttons-container'>";
+    response += makeQuickSendButton("Decrease Volume", "0x1EA0CF3");
+    response += makeQuickSendButton("Increase Volume", "0x1EA0DF2");
+    response += makeQuickSendButton("Play/Pause", "0x1EAFE01");
+    response += makeQuickSendButton("Show Display", "0x1EA1DE2");
+    response += makeQuickSendButton("Use Bluetooth", "0x1EA22DD");
+    response += makeQuickSendButton("Use TV", "0x1EAA25D");
+    response += makeQuickSendButton("Speaker On/Off", "0x1EA12ED");
+    response += makeQuickSendButton("TV On/Off", "0x20DF10EF");
+    response += makeQuickSendButton("Netflix", "0x20DF6A95");
+    response += makeQuickSendButton("Prime", "0x20DF3AC5");
+    response += "</div>";
 
     response += "<table style=\"border-spacing: 0.5em;\">";
     response += "<tr><th>Protocol</th><th>Hex Code</th></tr>";
@@ -87,8 +96,6 @@ static void setupWebServer() {
 
     uint32_t code = 0;
     sscanf(hex_code.c_str() + 2, "%x", &code);
-    Serial.println(code);
-    Serial.println(uint64ToString(code, 16));
 
     ir_receiver.disableIRIn();
     ir_sender.sendNEC(code);
@@ -99,8 +106,31 @@ static void setupWebServer() {
 
   web_server.on("/style.css", []() {
     web_server.send(200, "text/css", R"STR(
-      * {
-        color: blue;
+      body {
+        margin: 0;
+      }
+
+      .quick-buttons-container {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+      }
+
+      .quick-send-button {
+        background-color: #CCCCCC;
+        text-align: center;
+        margin: 0.3rem;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        user-select: none;
+      }
+
+      .quick-send-button:hover {
+        background-color: #AAAAAA;
+      }
+
+      .quick-send-button:active {
+        background-color: #888888;
       }
     )STR");
   });
@@ -117,7 +147,7 @@ void setup() {
 static void handleIRReceiver() {
   IRDecodeResults ir_result;
   if (ir_receiver.decode(&ir_result)) {
-    if (!ir_result.repeat) {
+    if (!ir_result.repeat && ir_result.decode_type == NEC) {
       last_ir_messages.push(ir_result);
     }
     Serial.println(resultToHumanReadableBasic(&ir_result));
