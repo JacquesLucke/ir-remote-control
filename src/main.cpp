@@ -2,6 +2,7 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266WiFi.h>
 #include <IRrecv.h>
+#include <IRsend.h>
 #include <IRutils.h>
 
 #include "circular_buffer.h"
@@ -14,6 +15,9 @@ ESP8266WebServer web_server(web_server_port);
 
 constexpr int ir_receiver_pin = D1;
 IRrecv ir_receiver(ir_receiver_pin);
+
+constexpr int ir_send_pin = D2;
+IRsend ir_sender(ir_send_pin);
 
 // Use a name with more information for this type.
 using IRDecodeResults = decode_results;
@@ -33,12 +37,22 @@ static void setupWiFiConnection() {
   Serial.println(WiFi.localIP());
 }
 
+static String makeSendButtonNED(const char *name, const char *hex_code) {
+  return "<button type='button' "
+         "onclick=\"fetch('./send_ir?hex_code=" +
+         String(hex_code) + "')\">" + name + "</button>";
+}
+
 static void setupWebServer() {
   web_server.begin();
   Serial.printf("Started web server on port %d.\n", web_server_port);
 
   web_server.on("/", []() {
     String response = "<h1>Remote Control</h1>";
+
+    response += makeSendButtonNED("Reduce Volume", "0x1EA0CF3");
+    response += makeSendButtonNED("Increase Volume", "0x1EA0DF2");
+
     response += "<table style=\"border-spacing: 0.5em;\">";
     response += "<tr><th>Protocol</th><th>Hex Code</th></tr>";
     for (int i = 0; i < last_ir_messages.size(); i++) {
@@ -48,9 +62,6 @@ static void setupWebServer() {
       response += "<tr>";
       response += "<td>" + typeToString(ir_result.decode_type) + "<th>";
       response += "<td>" + hex_code + "<th>";
-      response += "<td><button type='button' "
-                  "onclick=\"fetch('./send_ir?hex_code=" +
-                  hex_code + "')\">Send</button></td>";
       response += "</tr>";
     }
     response += "</table>";
@@ -60,6 +71,16 @@ static void setupWebServer() {
   web_server.on("/send_ir", []() {
     String hex_code = web_server.arg("hex_code");
     Serial.println(hex_code);
+
+    uint32_t code = 0;
+    sscanf(hex_code.c_str() + 2, "%x", &code);
+    Serial.println(code);
+    Serial.println(uint64ToString(code, 16));
+
+    ir_receiver.disableIRIn();
+    ir_sender.sendNEC(code);
+    ir_receiver.enableIRIn();
+
     web_server.send(200, "text/html", "code send");
   });
 }
@@ -69,6 +90,7 @@ void setup() {
   setupWiFiConnection();
   setupWebServer();
   ir_receiver.enableIRIn();
+  ir_sender.begin();
 }
 
 static void handleIRReceiver() {
