@@ -74,18 +74,24 @@ static void setupWebServer() {
     response += makeQuickSendButton("Prime", "0x20DF3AC5");
     response += "</div>";
 
-    response += "<table style=\"border-spacing: 0.5em;\">";
-    response += "<tr><th>Protocol</th><th>Hex Code</th></tr>";
-    for (int i = 0; i < last_ir_messages.size(); i++) {
-      const IRDecodeResults &ir_result =
-          last_ir_messages.get_least_recently_added(i);
-      const String hex_code = resultToHexidecimal(&ir_result);
-      response += "<tr>";
-      response += "<td>" + typeToString(ir_result.decode_type) + "<th>";
-      response += "<td>" + hex_code + "<th>";
-      response += "</tr>";
+    if (last_ir_messages.size() > 0) {
+      response += "<h3>Last Received Signals</h3>";
+      response += "<table>";
+      response += "<tr><th>Protocol</th><th>Hex Code</th><th>Send</th></tr>";
+      for (int i = 0; i < last_ir_messages.size(); i++) {
+        const IRDecodeResults &ir_result =
+            last_ir_messages.get_least_recently_added(i);
+        const String hex_code = resultToHexidecimal(&ir_result);
+        response += "<tr>";
+        response += "<td>" + typeToString(ir_result.decode_type) + "</td>";
+        response += "<td>" + hex_code + "</td>";
+        response +=
+            "<td><button type='button' onclick='fetch(\"./send_ir?hex_code=" +
+            hex_code + "\")'>Send</button></td>";
+        response += "</tr>";
+      }
+      response += "</table>";
     }
-    response += "</table>";
     response += "</body></html>";
     web_server.send(200, "text/html", response.c_str());
   });
@@ -131,6 +137,12 @@ static void setupWebServer() {
 
       .quick-send-button:active {
         background-color: #888888;
+      }
+
+      th, td {
+        padding: 0.5em;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
       }
     )STR");
   });
