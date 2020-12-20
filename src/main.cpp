@@ -1,3 +1,4 @@
+#include <Adafruit_SSD1306.h>
 #include <Arduino.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266WiFi.h>
@@ -13,6 +14,9 @@
 constexpr int web_server_port = 80;
 ESP8266WebServer web_server(web_server_port);
 
+TwoWire display_wire;
+Adafruit_SSD1306 display{128, 32, &display_wire};
+
 constexpr int ir_receiver_pin = D1;
 IRrecv ir_receiver(ir_receiver_pin);
 
@@ -25,9 +29,19 @@ using IRDecodeResults = decode_results;
 // Queue that keeps track of the last few ir messages.
 CircularBuffer<IRDecodeResults, 5> last_ir_messages;
 
+static void updateDisplayText(const char *text) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println(text);
+  display.display();
+}
+
 static void setupWiFiConnection() {
   WiFi.begin(WIFI_NAME, WIFI_PASSWORD);
   Serial.print("Connecting");
+  updateDisplayText("Connecting...");
   while (WiFi.status() != WL_CONNECTED) {
     delay(200);
     Serial.print(".");
@@ -35,6 +49,9 @@ static void setupWiFiConnection() {
   Serial.println();
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+
+  String display_text = WiFi.localIP().toString();
+  updateDisplayText(display_text.c_str());
 }
 
 static String makeQuickSendButton(const char *name, const char *hex_code) {
@@ -148,8 +165,15 @@ static void setupWebServer() {
   });
 }
 
+static void setupDisplay() {
+  display_wire.begin(/* sda */ D5, /* scl */ D6);
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C); // Address 0x3C for 128x32
+  Serial.println("Setup Display.");
+}
+
 void setup() {
   Serial.begin(9600);
+  setupDisplay();
   setupWiFiConnection();
   setupWebServer();
   ir_receiver.enableIRIn();
